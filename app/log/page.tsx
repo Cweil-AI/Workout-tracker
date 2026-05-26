@@ -79,7 +79,7 @@ export default function LogWorkout() {
     setNotes('');
   }
 
-  function finishWorkout() {
+  async function finishWorkout() {
     let allExercises = [...addedExercises];
     if (selectedMuscleGroup && selectedExercise) {
       const validSets = getValidSets();
@@ -95,7 +95,7 @@ export default function LogWorkout() {
       return;
     }
     setError('');
-    saveSession(allExercises);
+    await saveSession(allExercises);
     setSaved(true);
     setTimeout(() => router.push('/'), 1200);
   }

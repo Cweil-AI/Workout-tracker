@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
 const links = [
   { href: '/', label: 'Dashboard' },
@@ -11,6 +12,10 @@ const links = [
 
 export default function Nav() {
   const pathname = usePathname();
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+  }
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800 z-50">
@@ -29,6 +34,12 @@ export default function Nav() {
               {link.label}
             </Link>
           ))}
+          <button
+            onClick={handleLogout}
+            className="px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-300 transition-colors"
+          >
+            Log out
+          </button>
         </div>
       </div>
     </nav>

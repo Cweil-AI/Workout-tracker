@@ -1,36 +1,50 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { supabase } from './supabase';
 import { WorkoutSession, LoggedExercise } from './types';
-
-const STORAGE_KEY = 'workout_sessions_v1';
 
 export function useWorkouts() {
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setSessions(JSON.parse(raw));
-    } catch {
-      setSessions([]);
+    async function load() {
+      const { data } = await supabase
+        .from('workout_sessions')
+        .select('id, date, exercises')
+        .order('date', { ascending: false });
+
+      if (data) {
+        setSessions(data as WorkoutSession[]);
+      }
+      setIsLoaded(true);
     }
-    setIsLoaded(true);
+    load();
   }, []);
 
-  const saveSession = useCallback((exercises: LoggedExercise[]): string => {
+  const saveSession = useCallback(async (exercises: LoggedExercise[]): Promise<void> => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
     const session: WorkoutSession = {
       id: String(Date.now()),
       date: new Date().toISOString(),
       exercises,
     };
-    setSessions((prev) => {
-      const updated = [session, ...prev];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      return updated;
+
+    const { error } = await supabase.from('workout_sessions').insert({
+      id: session.id,
+      user_id: user.id,
+      date: session.date,
+      exercises: session.exercises,
     });
-    return session.id;
+
+    if (!error) {
+      setSessions((prev) => [session, ...prev]);
+    }
   }, []);
 
   const getLastPerformance = useCallback(
@@ -44,12 +58,11 @@ export function useWorkouts() {
     [sessions]
   );
 
-  const deleteSession = useCallback((id: string) => {
-    setSessions((prev) => {
-      const updated = prev.filter((s) => s.id !== id);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      return updated;
-    });
+  const deleteSession = useCallback(async (id: string) => {
+    const { error } = await supabase.from('workout_sessions').delete().eq('id', id);
+    if (!error) {
+      setSessions((prev) => prev.filter((s) => s.id !== id));
+    }
   }, []);
 
   return { sessions, saveSession, getLastPerformance, deleteSession, isLoaded };
