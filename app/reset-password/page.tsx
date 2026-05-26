@@ -13,10 +13,24 @@ export default function ResetPasswordPage() {
   const router = useRouter();
 
   useEffect(() => {
-    supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setReady(true);
-      }
+    // Supabase sends a ?code= param in the URL for password reset
+    const code = new URLSearchParams(window.location.search).get('code');
+
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+        if (error) {
+          setError('This reset link is invalid or has expired. Please request a new one.');
+        } else {
+          setReady(true);
+        }
+      });
+      return;
+    }
+
+    // Fallback: check for an existing session (implicit flow)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setReady(true);
+      else setError('No valid reset link found. Please request a new one.');
     });
   }, []);
 
@@ -41,10 +55,24 @@ export default function ResetPasswordPage() {
     setLoading(false);
   }
 
-  if (!ready) {
+  if (!ready && !error) {
     return (
       <div className="flex items-center justify-center min-h-[80vh]">
         <p className="text-gray-400">Verifying reset link...</p>
+      </div>
+    );
+  }
+
+  if (error && !ready) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[80vh] px-4 space-y-4">
+        <p className="text-red-400 text-center">{error}</p>
+        <button
+          onClick={() => router.push('/')}
+          className="text-blue-400 hover:text-blue-300 text-sm"
+        >
+          Back to login
+        </button>
       </div>
     );
   }

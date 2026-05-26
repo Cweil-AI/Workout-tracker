@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import LoginPage from '@/app/login/page';
@@ -8,6 +9,7 @@ import LoginPage from '@/app/login/page';
 export default function AuthWrapper({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const pathname = usePathname();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -23,6 +25,11 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Allow the reset password page through without requiring login
+  if (pathname === '/reset-password') {
+    return <>{children}</>;
+  }
 
   if (loading) {
     return (
